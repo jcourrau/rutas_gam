@@ -1,0 +1,21 @@
+osm_id,nombre,latitud,longitud,distrito,densidad_poblacional,destinos_estrategicos,fuente_densidad,fuente_geografica,w_i_preliminar
+4887957623,Parada de Autobus.,9.958231599998781,-84.09664660000391,León XIII,23915.27778,3,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.6333333333333333
+4887934442,Terminal León XIII,9.960278299998786,-84.10325030000392,León XIII,23915.27778,0,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.6
+10695750450,Torre Mercedes,9.934911899998765,-84.08938100000391,Hospital,7716.566265,31,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.5043443905226423
+6812663951,Ruta Sabana Cementerio,9.935069999998763,-84.08937570000391,Hospital,7716.566265,31,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.5043443905226423
+6812627601,Ruta Cementerio Sabana,9.934618199998761,-84.08639540000391,Hospital,7716.566265,31,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.5043443905226423
+6812627600,Ruta Cementerio Sabana,9.934890999998766,-84.08934890000391,Hospital,7716.566265,31,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.5043443905226423
+4100624694,Hospital de Niños - Paseo Colón,9.934843099998766,-84.08845470000391,Hospital,7716.566265,31,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.5043443905226423
+3816208961,Torre Mercedes,9.935055599998764,-84.0894153000039,Hospital,7716.566265,31,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.5043443905226423
+6812663952,Ruta Sabana Cementerio,9.935272099998766,-84.09161610000392,Hospital,7716.566265,30,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.4932332794115313
+4088745210,Paseo Colon,9.93512199999877,-84.09128250000391,Hospital,7716.566265,30,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.4932332794115313
+1819128390,Pavas - Aeropuerto Tobias Bolaños,9.935702699998766,-84.0878228000039,Merced,7183.636364,30,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.4787541970506006
+1819127096,Pavas - Zona 1,9.93562579999877,-84.08723820000391,Merced,7183.636364,30,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.4787541970506006
+12453512210,Park Inn,9.932427099998758,-84.09233000000391,Hospital,7716.566265,28,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.471011057189309
+10695750449,INA San José,9.935186799998766,-84.09216600000393,Hospital,7716.566265,28,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.471011057189309
+6812627599,Ruta Cementerio Sabana,9.935173499998765,-84.09200880000392,Hospital,7716.566265,28,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.471011057189309
+4400700798,López Mateos - San Sebasián,9.931738299998765,-84.08018030000389,Hospital,7716.566265,27,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.45989994607819795
+4400704339,San Martín - San Sebastián,9.931833399998762,-84.08018010000391,Hospital,7716.566265,27,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.45989994607819795
+4400697940,Santa Rosa - Paso Ancho,9.931659599998763,-84.0801855000039,Hospital,7716.566265,27,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.45989994607819795
+6812679485,Parada San José-Escazú,9.931204499998763,-84.08769390000393,Hospital,7716.566265,27,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.45989994607819795
+10857087776,Terminal Escazú,9.935103099998765,-84.0855879000039,Merced,7183.636364,28,"INEC, estimaciones distritales 2022","OpenStreetMap, consulta 2026-07-20",0.4565319748283784
