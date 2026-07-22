@@ -53,6 +53,26 @@ def simular_tiempos(grafo, ruta, repeticiones=1000, semilla=42):
     return totales * factor_general
 
 
+def comparar_simulaciones(grafo, rutas, repeticiones=1000):
+    """Reúne los tiempos simulados de las rutas optimizadas y base."""
+    registros = []
+    for numero, comparacion in enumerate(rutas):
+        semilla = comparacion.get("semilla", 42 + numero)
+        for tipo, recorrido in [
+            ("Ruta optimizada", comparacion["ruta_optima"]),
+            ("Ruta base", comparacion["ruta_base"]),
+        ]:
+            tiempos = simular_tiempos(
+                grafo, recorrido, repeticiones=repeticiones, semilla=semilla
+            )
+            registros.extend({
+                "par": comparacion["nombre"],
+                "tipo_ruta": tipo,
+                "tiempo_min": tiempo,
+            } for tiempo in tiempos)
+    return pd.DataFrame(registros)
+
+
 def evaluar_rutas(grafo, ruta_optima, ruta_base, nodos_explorados, semilla=42):
     """Calcula RT, RV, IC y NE para una ruta optimizada."""
     optima = resumen_ruta(grafo, ruta_optima)

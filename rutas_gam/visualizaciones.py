@@ -77,6 +77,40 @@ def graficar_rutas(grafo, resultados, ruta=None):
     return fig
 
 
+def graficar_simulaciones(simulaciones, ruta=None):
+    """Compara las distribuciones simuladas de cada par de rutas."""
+    pares = simulaciones["par"].drop_duplicates().tolist()
+    fig, ejes = plt.subplots(1, len(pares), figsize=(14, 4.5), sharey=True)
+    colores = {"Ruta optimizada": "#2563eb", "Ruta base": "#d97706"}
+    for eje, par in zip(np.atleast_1d(ejes), pares):
+        datos_par = simulaciones[simulaciones["par"] == par]
+        for tipo, color in colores.items():
+            valores = datos_par.loc[datos_par["tipo_ruta"] == tipo, "tiempo_min"]
+            eje.hist(
+                valores, bins=28, density=True, alpha=0.45,
+                color=color, edgecolor="white", label=tipo,
+            )
+            eje.axvline(valores.mean(), color=color, linewidth=1.8, linestyle="--")
+        eje.set_title(par, fontsize=10, fontweight="bold")
+        eje.set_xlabel("Tiempo simulado (min)")
+        eje.grid(axis="y", color="#e5e7eb", linewidth=0.8)
+        eje.set_axisbelow(True)
+        eje.spines[["top", "right"]].set_visible(False)
+    ejes[0].set_ylabel("Densidad")
+    controles, etiquetas = ejes[0].get_legend_handles_labels()
+    fig.legend(
+        controles, etiquetas, loc="lower center", ncol=2,
+        frameon=False, bbox_to_anchor=(0.5, -0.02),
+    )
+    fig.suptitle(
+        "Distribución de tiempos en 1 000 escenarios",
+        fontsize=15, fontweight="bold",
+    )
+    fig.tight_layout(rect=(0, 0.1, 1, 0.92), w_pad=2)
+    _guardar(fig, ruta)
+    return fig
+
+
 def graficar_metricas(tabla, ruta=None):
     """Compara las cuatro métricas de éxito por par."""
     colores = ["#2563eb", "#0f766e", "#d97706"]
