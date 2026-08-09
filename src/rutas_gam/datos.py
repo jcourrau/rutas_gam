@@ -93,14 +93,25 @@ def cargar_grafo(ruta):
     return ox.load_graphml(ruta)
 
 
-def agregar_tiempos(grafo):
-    """Agrega velocidad y tiempo estimado a todos los arcos."""
+def agregar_tiempos(grafo, escala_imputada=1.0):
+    """Agrega velocidad y tiempo estimado a todos los arcos.
+
+    ``escala_imputada`` multiplica únicamente las velocidades imputadas por
+    clase vial (no las registradas en OSM). Se usa en el análisis de
+    sensibilidad para simular que el supuesto de la Ley N.º 9078 subestima o
+    sobreestima la velocidad real de flujo libre.
+    """
     preparado = grafo.copy()
     for _, _, _, datos in preparado.edges(keys=True, data=True):
         velocidad_osm = normalizar_velocidad(datos.get("maxspeed"))
-        velocidad = velocidad_osm or velocidad_por_tipo(datos.get("highway"))
+        if velocidad_osm:
+            velocidad = velocidad_osm
+            fuente = "OSM"
+        else:
+            velocidad = velocidad_por_tipo(datos.get("highway")) * escala_imputada
+            fuente = "Imputada"
         datos["speed_kph"] = velocidad
-        datos["speed_source"] = "OSM" if velocidad_osm else "Imputada"
+        datos["speed_source"] = fuente
         datos["travel_time_min"] = float(datos["length"]) / velocidad * 0.06
     return preparado
 
@@ -116,6 +127,28 @@ def calcular_importancia(paradas, alfa=0.6, beta=0.4):
     if "w_i_preliminar" in resultado.columns:
         resultado["w_i"] = resultado["w_i_preliminar"]
         return resultado.sort_values("w_i", ascending=False).reset_index(drop=True)
+    for columna, nueva in [
+        ("densidad_poblacional", "densidad_normalizada"),
+        ("destinos_estrategicos", "destinos_normalizados"),
+    ]:
+        minimo = resultado[columna].min()
+        rango = resultado[columna].max() - minimo
+        resultado[nueva] = 0.0 if rango == 0 else (resultado[columna] - minimo) / rango
+    resultado["w_i"] = (
+        alfa * resultado["densidad_normalizada"]
+        + beta * resultado["destinos_normalizados"]
+    )
+    return resultado.sort_values("w_i", ascending=False).reset_index(drop=True)
+
+
+def recalcular_importancia(paradas, alfa=0.6, beta=0.4):
+    """Recalcula w_i desde las variables crudas, ignorando w_i_preliminar.
+
+    A diferencia de ``calcular_importancia``, siempre recompone la
+    normalización min-max y la combinación ponderada. Se usa para el
+    análisis de sensibilidad sobre los pesos alfa y beta.
+    """
+    resultado = paradas.copy()
     for columna, nueva in [
         ("densidad_poblacional", "densidad_normalizada"),
         ("destinos_estrategicos", "destinos_normalizados"),

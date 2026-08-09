@@ -9,7 +9,8 @@ import pandas as pd
 
 
 RAIZ = Path(__file__).resolve().parent
-RUTA_POBLACION = RAIZ.parent / "datos" / "poblacion_distritos_costa_rica_2022.csv"
+RUTA_POBLACION = RAIZ.parent / "data" / "raw" / "poblacion_distritos_costa_rica_2022.csv"
+RUTA_SALIDA = RAIZ.parent / "data" / "processed" / "paradas_importantes.csv"
 CAJA = (-84.120, 9.962, -84.038, 9.905)
 
 
@@ -124,8 +125,8 @@ def main():
     destinos_norm /= max(tabla["destinos_estrategicos"].max() - tabla["destinos_estrategicos"].min(), 1)
     tabla["w_i_preliminar"] = 0.6 * densidad + 0.4 * destinos_norm
     tabla = tabla.sort_values("w_i_preliminar", ascending=False).head(20)
-    ruta = RAIZ.parent / "datos" / "paradas_importantes.csv"
-    ruta.parent.mkdir(exist_ok=True)
+    ruta = RUTA_SALIDA
+    ruta.parent.mkdir(parents=True, exist_ok=True)
     tabla.to_csv(ruta, index=False)
     print(tabla[["nombre", "distrito", "destinos_estrategicos", "w_i_preliminar"]])
 
