@@ -1,9 +1,11 @@
 # Optimización de rutas de transporte público en el GAM mediante teoría de grafos
 
-**Curso:** BCD5105 Modelado Matemático — Lead University, II Cuatrimestre 2026
-**Carril temático:** #3, Optimización de rutas de transporte público
-**Integrantes:** Siloé Campos, Jason Corrau, Gabriel Corrales, David Mora
-**Profesor:** Jordy Alfaro Brenes
+**Curso:** BCD5105 Modelado Matemático — Lead University, II Cuatrimestre 2026 <br>
+**Carril temático:** #3, Optimización de rutas de transporte público <br>
+**Integrantes:** Siloé Campos, Jason Corrau, Gabriel Corrales, David Mora <br>
+**Profesor:** Jordy Alfaro Brenes <br>
+
+---
 
 ## Descripción del problema
 
