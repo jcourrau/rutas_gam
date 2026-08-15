@@ -6,5 +6,5 @@ docs/_tmp_render_artifacts/
 .DS_Store
 Thumbs.db
 .venv/
-Avance_Grupo1_Rutas_GAM - Backup.docx
 .gitignore
+docs/borradores/
