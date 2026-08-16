@@ -25,7 +25,7 @@ A* bidireccional resuelve cada función de costo. Dijkstra emplea exactamente el
 
 ## Flujo principal
 
-La interfaz de alto nivel permite mantener separadas la selección determinista y la evaluación estocástica:
+La interfaz de alto nivel permite mantener separadas la selección determinista y la evaluación estocástica. El siguiente ejemplo supone que `casos` ya contiene los pares con `nombre`, `origen` y `destino`:
 
 ```python
 import rutas_gam as rg
@@ -55,7 +55,7 @@ comparacion = rg.comparar_y_simular_modelos(
 
 ## Validación y sensibilidad
 
-La validación ampliada también dispone de operaciones de alto nivel:
+La validación ampliada también dispone de operaciones de alto nivel. Las rutas de archivos, las configuraciones nominales y los valores de $\lambda$ se proporcionan desde la libreta:
 
 ```python
 preparacion = rg.preparar_validacion_ampliada(
@@ -97,7 +97,7 @@ modelo_3 = rg.ModeloRuta(
 resultado_3 = rg.ejecutar_modelo(grafo, casos, modelo_3)
 ```
 
-Antes de ejecutarlo, todos los arcos deben contener el atributo indicado en `peso`. La función debe producir costos positivos y aditivos para mantener la formulación de camino mínimo.
+Antes de ejecutarlo, todos los arcos deben contener el atributo indicado en `peso`. Ese atributo debe representar costos positivos y aditivos para mantener la formulación de camino mínimo.
 
 `rg.comparar_resultados_modelos` recibe dos o más resultados y utiliza el primero como referencia para identificar cambios de ruta:
 

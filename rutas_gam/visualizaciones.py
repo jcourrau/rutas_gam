@@ -48,7 +48,7 @@ def graficar_red_y_paradas(grafo, paradas, ruta=None):
         paradas["longitud"], paradas["latitud"], c=paradas["w_i"],
         cmap="viridis", s=28 + paradas["w_i"] * 55, zorder=4,
     )
-    barra_color = fig.colorbar(puntos, ax=ax, label="Índice de importancia w_i")
+    barra_color = fig.colorbar(puntos, ax=ax, label="Índice de importancia $w_i$")
     barra_color.ax.set_facecolor("white")
     barra_color.ax.patch.set_alpha(1)
     ax.set_title("Red vial y 20 paradas importantes de San José", color="black")
@@ -58,10 +58,20 @@ def graficar_red_y_paradas(grafo, paradas, ruta=None):
 
 def graficar_importancia(paradas, ruta=None):
     """Compara la importancia de las paradas seleccionadas."""
-    datos = paradas.head(20).sort_values("w_i")
+    datos = paradas.head(20).copy()
+    repeticion = datos.groupby("nombre", sort=False).cumcount().add(1)
+    duplicada = datos["nombre"].duplicated(keep=False)
+    datos["etiqueta"] = datos["nombre"]
+    datos.loc[duplicada, "etiqueta"] = (
+        datos.loc[duplicada, "nombre"]
+        + " ("
+        + repeticion.loc[duplicada].astype(str)
+        + ")"
+    )
+    datos = datos.sort_values("w_i")
     fig, ax = plt.subplots(figsize=(9, 6))
-    ax.barh(datos["nombre"], datos["w_i"], color="#0f766e")
-    ax.set_xlabel("Índice de importancia w_i")
+    ax.barh(datos["etiqueta"], datos["w_i"], color="#0f766e")
+    ax.set_xlabel("Índice de importancia $w_i$")
     ax.set_title("Importancia combinada de las paradas seleccionadas")
     fig.tight_layout()
     _guardar(fig, ruta)
@@ -235,7 +245,7 @@ def graficar_simulaciones(simulaciones, ruta=None):
     conteos = simulaciones.groupby(["par", columna_modelo]).size()
     if conteos.nunique() == 1:
         cantidad = f"{int(conteos.iloc[0]):,}".replace(",", " ")
-        titulo = f"Distribución de tiempos en {cantidad} escenarios"
+        titulo = f"Distribución de tiempos en {cantidad} réplicas"
     else:
         titulo = "Distribución de tiempos simulados"
     fig.suptitle(
@@ -390,14 +400,11 @@ def graficar_sensibilidad_modelos(
         "Ajustada por variabilidad": "#0f766e",
     }
     valores_lambda = tuple(valores_lambda)
-    salto = max(1, int(np.ceil(len(valores_lambda) / 6)))
-    marcas_lambda = set(valores_lambda[::salto])
-    marcas_lambda.update((valores_lambda[0], valores_lambda[-1]))
     cambios_lambda = resumen_lambda.loc[
         resumen_lambda["rutas_diferentes"].diff().fillna(0).ne(0),
         "lambda_riesgo",
     ]
-    marcas_lambda.update(cambios_lambda)
+    marcas_lambda = np.linspace(valores_lambda[0], valores_lambda[-1], 6)
 
     fig, ejes = plt.subplots(1, 3, figsize=(15, 4.5))
 
@@ -410,10 +417,23 @@ def graficar_sensibilidad_modelos(
     )
     ejes[0].set(
         title="Sensibilidad al riesgo",
-        xlabel="lambda",
+        xlabel="$\\lambda$",
         ylabel="Rutas diferentes",
-        xticks=sorted(marcas_lambda),
+        xticks=marcas_lambda,
     )
+    for valor in cambios_lambda:
+        rutas = resumen_lambda.loc[
+            resumen_lambda["lambda_riesgo"].eq(valor), "rutas_diferentes"
+        ].iloc[0]
+        ejes[0].annotate(
+            f"$\\lambda={valor:g}$",
+            xy=(valor, rutas),
+            xytext=(0, 9),
+            textcoords="offset points",
+            ha="center",
+            fontsize=8,
+            color="#374151",
+        )
 
     for modelo, datos in resumen_velocidades.groupby("modelo", sort=False):
         ejes[1].plot(

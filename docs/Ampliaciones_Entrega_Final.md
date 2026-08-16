@@ -301,7 +301,7 @@ Los componentes de esta función tienen la siguiente interpretación:
 - $\lambda=1$ añade al costo de cada arco una desviación estándar derivada;
 - valores mayores de $\lambda$ favorecen recorridos más conservadores, aunque puedan tener un tiempo central ligeramente mayor.
 
-El Modelo 2 se ejecuta primero con $\lambda=1$, que representa una penalización equivalente a una desviación estándar derivada por arco. Después se comparan valores entre $0$ y $10$ con incrementos de $0.5$ mediante resultados deterministas promedio. El criterio consiste en utilizar el menor valor positivo probado que modifique al menos una de las tres rutas originales. Los recorridos se mantienen hasta $\lambda=6$; con $\lambda=6.5$ cambia un par y el tiempo promedio apenas pasa de $9.05$ a $9.06$ minutos. Desde $\lambda=9.5$ cambian dos rutas y el promedio aumenta a $9.84$ minutos. Por esta razón se utiliza $\lambda=6.5$ para el Modelo 2 y para su evaluación posterior.
+El Modelo 2 se ejecuta primero con $\lambda=1$, que representa una penalización equivalente a una desviación estándar derivada por arco. Después se comparan valores entre $0$ y $10$ con incrementos de $0.5$ mediante resultados deterministas promedio. El criterio consiste en utilizar el menor valor positivo probado que modifique al menos una de las tres rutas originales. Los recorridos se mantienen hasta $\lambda=6$; con $\lambda=6.5$ cambia un par y el tiempo determinista promedio apenas pasa de $9.05$ a $9.06$ minutos. Desde $\lambda=9.5$ cambian dos rutas y el promedio aumenta a $9.84$ minutos. Por esta razón se utiliza $\lambda=6.5$ para el Modelo 2 y para su evaluación posterior.
 
 Esta selección permite estudiar una decisión diferente sin adoptar el mayor valor evaluado. No constituye una calibración empírica del riesgo: depende de las dispersiones supuestas por clase vial y se reporta como una decisión metodológica exploratoria.
 
@@ -356,6 +356,8 @@ Los tres pares originales se mantienen para asegurar continuidad con el Avance 1
 $$
 \operatorname{default\_rng}(2026).
 $$
+
+El valor `2026` funciona como semilla reproducible: al conservar los mismos datos y entorno, la selección aleatoria genera los mismos pares en cada ejecución.
 
 Se excluyen pares sin un camino dirigido factible y los tres casos originales. La muestra adicional no sustituye los casos del avance ni se utiliza para escoger ejemplos favorables. Su finalidad es comprobar si los resultados observados se mantienen más allá de tres recorridos seleccionados manualmente.
 
@@ -496,9 +498,9 @@ $$
 - Con $\lambda=0$, el segundo costo debe reproducir el Modelo 1.
 - Entre $\lambda=1$ y $\lambda=6$, se estudia si la decisión permanece estable ante penalizaciones crecientes.
 - Con $\lambda=6.5$, se evalúa la especificación principal seleccionada.
-- Con $\lambda=10$, se observa el efecto de una posición más conservadora.
+- Con $\lambda=9.5$ y $\lambda=10$, se observa el segundo cambio de decisión.
 
-Los recorridos no cambiaron entre $\lambda=0$ y $\lambda=6$. Con $\lambda=6.5$ cambió un par y la media agregada pasó de $9.06$ a $9.07$ minutos. Con $\lambda=10$ cambiaron dos pares, la media aumentó a $9.85$ minutos y el percentil 90 a $11.86$ minutos. La decisión es estable ante penalizaciones moderadas y sensible a partir del umbral observado de $6.5$.
+Los recorridos no cambiaron entre $\lambda=0$ y $\lambda=6$. Con $\lambda=6.5$ cambió un par y la media agregada pasó de $9.06$ a $9.07$ minutos. Desde $\lambda=9.5$ cambiaron dos pares, la media aumentó a $9.85$ minutos y el percentil 90 a $11.86$ minutos. La decisión es estable ante penalizaciones moderadas y sensible a partir del umbral observado de $6.5$.
 
 ### 7.2 Velocidades imputadas
 
@@ -623,3 +625,17 @@ Cada figura debe llevar número, título, fuente y un párrafo que explique qué
 La conclusión sustentada no es que el modelo ajustado por variabilidad sea mejor por producir rutas diferentes. Con $\lambda=6.5$, modifica 1 de los 3 casos originales y 11 de los 30 adicionales, pero obtiene una media y un percentil 90 ligeramente mayores en la muestra adicional. Por ello, el Modelo 1 se selecciona como resultado principal dentro del alcance actual, mientras que el Modelo 2 demuestra la sensibilidad de la decisión a una penalización explícita de incertidumbre.
 
 Antes de entregar, el documento Word debe actualizarse con estas formulaciones y resultados, convertirse a PDF, mantenerse entre 12 y 16 páginas sin anexos, incluir al menos diez referencias APA 7 citadas en el texto y contener el enlace visible al repositorio público.
+
+## 11. Recomendaciones para una etapa futura con datos reales
+
+Una siguiente etapa debe incorporar observaciones que permitan estimar los tiempos y la variabilidad de cada tramo. Se recomienda recopilar registros GPS de autobuses, tiempos reales de viaje y condiciones asociadas con el horario, el día de la semana, el tráfico y el clima. Con estas observaciones, $t_{ij}$ y $s_{ij}$ podrían estimarse por arco y período en lugar de derivarse únicamente de velocidades de flujo libre y dispersiones supuestas.
+
+También conviene integrar recorridos oficiales, paradas, horarios y frecuencias. Esta información permitiría construir referencias operativas y considerar tiempos de espera, transbordos y restricciones propias del servicio. La demanda puede incorporarse mediante datos agregados de ascensos y descensos, matrices origen–destino o encuestas de movilidad, de modo que los pares analizados respondan a desplazamientos relevantes para los usuarios.
+
+El parámetro $\lambda$ debería calibrarse con un criterio observable. Una alternativa consiste en relacionarlo con metas de puntualidad o con la disposición institucional a aceptar un aumento en el tiempo esperado a cambio de reducir retrasos. La calibración y la evaluación deben utilizar períodos o recorridos diferentes para comprobar el desempeño fuera de la muestra empleada durante el ajuste.
+
+La simulación puede ampliarse mediante escenarios definidos para toda la red. En cada réplica, cada arco conservaría una perturbación común para todas las rutas que lo utilizan y podrían incorporarse correlaciones espaciales o temporales. Esto permitiría representar con mayor fidelidad eventos compartidos como congestión localizada, lluvia o cierres viales.
+
+La validación futura debe comparar los tiempos calculados con observaciones mediante métricas como error absoluto medio, error porcentual, cobertura de intervalos y cumplimiento de umbrales de puntualidad. Además, debe evaluar por separado distintos períodos, sectores y grupos de usuarios para identificar posibles sesgos de cobertura.
+
+Con estas ampliaciones, el proyecto podría avanzar desde una comparación metodológica de caminos sobre una red vial hacia una herramienta de apoyo para la planificación del transporte público. Cualquier uso operativo debe acompañarse de validación de campo, revisión institucional y documentación de la procedencia, licencia y calidad de los datos.

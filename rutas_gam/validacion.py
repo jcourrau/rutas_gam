@@ -609,7 +609,7 @@ def consolidar_sensibilidad(
     resumen_lambda = analisis_lambda.resumen.assign(
         analisis="Penalización de riesgo",
         modelo="Ajustada por variabilidad",
-        efecto_observado="Sin cambios hasta lambda 6; uno con 6.5 y dos con 10",
+        efecto_observado="Sin cambios hasta lambda 6; uno con 6.5 y dos desde 9.5",
         conclusion="Estable ante penalizaciones moderadas y sensible desde lambda 6.5",
     ).rename(columns={"lambda_riesgo": "valor"})
     resumen_velocidades = analisis_velocidades.resumen.assign(

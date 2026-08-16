@@ -13,7 +13,7 @@ Este proyecto académico estudia caminos entre puntos de San José sobre una red
 
 La investigación constituye una primera aproximación metodológica. Utiliza velocidades registradas en OpenStreetMap (OSM) o imputadas según la clase vial y trabaja con tres pares origen–destino definidos para el estudio. Los resultados representan tiempos teóricos de flujo libre sobre la red vial de San José.
 
-Las rutas base son referencias reproducibles construidas mediante puntos intermedios. El análisis actual utiliza datos geográficos y demográficos agregados; las conclusiones deben interpretarse dentro de ese alcance.
+Las rutas base son referencias reproducibles construidas mediante puntos intermedios. El análisis actual utiliza datos geográficos y demográficos agregados; las conclusiones deben interpretarse dentro de ese alcance. El índice de confiabilidad describe la estabilidad interna de cada distribución simulada.
 
 ## Modelos y evaluación
 
@@ -52,7 +52,7 @@ Las libretas localizan la raíz del repositorio mediante rutas relativas. Cada e
 ## Resultados principales
 
 - Con $\lambda=6.5$, el Modelo 2 cambia 1 de los 3 recorridos originales y 11 de los 30 adicionales.
-- A* y Dijkstra coinciden para ambos costos en los 33 pares, con una diferencia máxima aproximada de $2.2\times10^{-14}$ minutos.
+- A* y Dijkstra coinciden para ambos costos en los 33 pares, con una diferencia máxima aproximada de $2.13\times10^{-14}$ minutos.
 - En la muestra adicional, el Modelo 1 obtiene una media simulada de 6.37 minutos y un percentil 90 de 7.66; el Modelo 2 obtiene 6.45 y 7.76 minutos, respectivamente.
 - El Modelo 1 se selecciona como resultado principal bajo los supuestos actuales. El Modelo 2 se conserva como análisis de sensibilidad a la variabilidad.
 - Las conclusiones son estables ante penalizaciones moderadas y con 1 000 réplicas, pero son más sensibles a las velocidades imputadas.
