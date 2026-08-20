@@ -1,0 +1,759 @@
+\documentclass[11pt]{article}
+
+% ===================== PAQUETES =====================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!50!black,
+    urlcolor=blue!50!black,
+    citecolor=blue!50!black
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{IIC2026 - G1 - Modelado Matemático}
+\fancyhead[R]{\thepage}
+\setlength{\headheight}{14pt}
+\Urlmuskip=0mu plus 1mu
+
+% Numeración de ecuaciones por sección
+\numberwithin{equation}{section}
+
+\title{
+    \textbf{IIC2026 - G1 - Modelado Matemático}\\[4pt]
+    \large Entrega final del proyecto integrador\\[8pt]
+    \Large\textbf{Optimización de rutas de autobuses intersectoriales en la GAM}\\[4pt]
+    \normalsize\textit{mediante teoría de grafos y búsqueda de caminos mínimos (A*/Dijkstra)}
+}
+
+\author{
+    \textbf{Profesor}\\ Jordy Jesús Alfaro Brenes \\[8pt]
+    \textbf{Alumnos}\\
+    Siloé Campos \\ Jason Corrau \\ Gabriel Corrales \\ David Mora \\[8pt]
+    \textbf{Repositorio público (GitHub):}\\ \url{https://github.com/jcourrau/rutas_gam}
+}
+
+\date{Costa Rica, agosto de 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+% =====================================================
+\section{Atención a la retroalimentación del Avance 1}\label{sec:retroalimentacion}
+% =====================================================
+
+Se reconoció como sólidos el planteamiento del problema y la justificación (caída del 42.2\,\% en el uso del bus, los más de 2.1 millones de vehículos registrados y el 42\,\% de las emisiones nacionales atribuibles al sector transporte), así como los objetivos concretos y medibles y el rigor de la formulación matemática inicial. Señaló, sin embargo, que el avance 1 quedó incompleto y planteó un punto conceptual que debía resolverse antes de programar. La Tabla~\ref{tab:retroalimentacion} documenta cada comentario y cómo se atendió en esta entrega.
+
+\begin{longtable}{p{0.45\textwidth} p{0.48\textwidth}}
+\caption{Retroalimentación del Avance 1 y acciones incorporadas en la entrega final.}\label{tab:retroalimentacion}\\
+\toprule
+\textbf{Comentario recibido en el avance 1} & \textbf{Cómo se atendió en esta entrega} \\
+\midrule
+\endhead
+El documento no incluía el primer modelo aplicado, ni el análisis exploratorio con visualizaciones, ni el notebook: el PDF se detenía en ``Integración de los datos con el modelo'' y saltaba a las referencias.
+&
+Se implementaron y documentaron los tres notebooks (\texttt{01\_exploracion}, \texttt{02\_modelos}, \texttt{03\_validacion}), el análisis exploratorio con las visualizaciones de la sección~\ref{sec:datos}, y los dos modelos aplicados con sus resultados numéricos en la sección~\ref{sec:modelos}. \\
+\addlinespace
+Punto conceptual: el proyecto mezclaba dos enfoques distintos. Si el objetivo es el camino más eficiente entre un origen y un destino, eso se resuelve con A* o Dijkstra y la restricción de eliminación de subtours (MTZ) sobra; la restricción de conservación de flujo ya correspondía a la formulación de camino mínimo. La MTZ y el modelo entero con $x_{ij}$ binario solo son necesarios para diseñar una ruta que recorra varios nodos de alta demanda (tipo problema del agente viajero). Había que definir cuál de los dos problemas se iba a resolver.
+&
+Se definió explícitamente el problema como una búsqueda de camino mínimo punto a punto (no un TSP). En consecuencia, se eliminaron del marco teórico la variable binaria $x_{ij}$, la restricción de eliminación de subtours (MTZ) y el término $\gamma(1/w_j)$ de la función de costo; el índice $w_i$ se conservó únicamente para seleccionar las paradas candidatas (sección~\ref{subsec:paradas}). Ambos modelos se resuelven íntegramente con A* bidireccional, verificado con Dijkstra (sección~\ref{sec:modelos}). \\
+\addlinespace
+Agregar referencias de los métodos utilizados (\texttt{osmnx}, \texttt{networkx}, A*/Dijkstra y el texto de Barabási del curso).
+&
+Se agregaron Boeing (2017) para OSMnx, Hagberg, Schult y Swart (2008) para NetworkX, Dijkstra (1959) y Hart, Nilsson y Raphael (1968) para los algoritmos, y Barabási y Pósfai (2016) como texto de referencia del curso, todos incluidos en las referencias bibliográficas. \\
+\addlinespace
+Sustituir la referencia de Prezi (aplicación de teoría de grafos al Metro de Santiago) por una fuente más sólida.
+&
+Se reemplazó por Cardozo, Gómez y Parras (2009), artículo revisado por pares en la Revista Transporte y Territorio (Universidad de Buenos Aires) sobre teoría de grafos aplicada al transporte público de pasajeros. \\
+\bottomrule
+\end{longtable}
+
+% =====================================================
+\section{Introducción y planteamiento del problema}\label{sec:introduccion}
+% =====================================================
+
+El transporte público en la Gran Área Metropolitana (GAM) de Costa Rica enfrenta una crisis estructural profunda que compromete la calidad de vida de millones de personas y la competitividad del país. La GAM concentra más de la mitad de la población costarricense, siendo la región más urbanizada, poblada y económicamente activa del país (Museo Nacional de Costa Rica, s.f.). Esta alta densidad convierte la movilidad eficiente en un factor crítico y, sin embargo, el sistema de transporte público ha sido incapaz de responder a ese crecimiento.
+
+El problema central es la ineficiencia estructural de las rutas de autobús: el sistema actual no está diseñado para la interconexión de rutas, y las congestiones en hora pico generan un colapso recurrente de la red vial que produce pérdidas inmensas de tiempo y capital. Esta situación se ha agravado progresivamente: entre 2012 y 2024, el uso del autobús cayó un 42.2\,\% mientras la cantidad de vehículos creció un 62.1\,\% (Garcia, 2026), en un círculo vicioso donde la congestión hace al bus más lento, lo que expulsa más usuarios hacia el vehículo privado, que a su vez genera más congestión (El Financiero, 2026). Para 2025, Costa Rica superó los 2.1 millones de vehículos registrados, con un crecimiento promedio anual del 4.2\,\%, lo que equivale a incorporar aproximadamente 85\,000 vehículos nuevos por año sobre una red vial que no crece al mismo ritmo (El Financiero, 2026).
+
+Frente a esta realidad, la teoría de grafos ofrece una herramienta matemática rigurosa para modelar y optimizar redes de transporte: los nodos representan intersecciones o paradas, y las aristas representan los tramos entre ellas, ponderadas por variables como el tiempo de viaje. Sobre esta representación es posible aplicar algoritmos clásicos de caminos mínimos y estudiar redes de transporte mediante teoría de grafos (Barabási y Pósfai, 2016; Vásquez Gómez, Fernández y Rincón, 2024).
+
+El presente proyecto modela la red vial de San José como un grafo dirigido ponderado obtenido de \textit{OpenStreetMap}, calcula el tiempo estimado de viaje en condiciones de flujo libre para cada tramo, y compara dos criterios de selección de ruta: menor tiempo y tiempo ajustado por variabilidad entre pares de puntos de alta demanda, verificando la optimalidad de las rutas obtenidas y evaluando su comportamiento mediante simulación Monte Carlo.
+
+\paragraph{Nota metodológica respecto al avance 1.} En la propuesta original se planteaba trabajar con tiempos históricos observados durante la hora pico matutina (6:00--8:00 a.\,m.). Ante la falta de datos reales de tiempos de viaje para esta etapa, el proyecto se ajustó para trabajar con tiempos teóricos de flujo libre (sin congestión observada), calculados a partir de longitudes y velocidades de los tramos viales. Esta limitación se documenta en la sección~\ref{sec:datos} y se discute en la sección~\ref{subsec:limitaciones}.
+
+% =====================================================
+\section{Justificación}\label{sec:justificacion}
+% =====================================================
+
+La relevancia de este problema trasciende lo técnico: es una urgencia social, económica y ambiental con implicaciones directas para la mayoría de la población costarricense, donde más de 2.7 millones de personas residen en la GAM y una gran parte de ellas invierte entre una y dos horas diarias para trasladarse a sus centros de trabajo o estudio, en un país que aún carece de un sistema integrado de transporte público que permita combinar modalidades de manera eficiente (Universidad de Costa Rica [UCR], 2024).
+
+Desde el ámbito institucional, el problema tiene décadas de reconocimiento sin resolución: la primera propuesta formal de sectorización del transporte público del Área Metropolitana data de 1998, y su objetivo de lograr mayor efectividad en costos, conectividad y tiempos de viaje sigue siendo un pendiente vigente (UCR, 2023). Esto evidencia que los enfoques empíricos y administrativos han resultado insuficientes, lo que abre una oportunidad concreta para la aplicación de métodos computacionales y matemáticos como los que propone este proyecto.
+
+El impacto ambiental refuerza la urgencia de actuar: el sector transporte es el mayor emisor de gases de efecto invernadero en Costa Rica, con un 42\,\% del total nacional, y el mayor consumidor de hidrocarburos del país (Programa de las Naciones Unidas para el Desarrollo [PNUD], 2022). Optimizar rutas y hacer el transporte público más competitivo frente al vehículo privado contribuiría directamente a reducir estas emisiones.
+
+Los beneficiarios directos de una optimización de rutas son los usuarios cotidianos del sistema (trabajadores, estudiantes y personas de menores ingresos con mayor dependencia del transporte público), las empresas operadoras (que podrían reducir costos de operación), y el Estado, que enfrenta la presión de modernizar el sistema. La teoría de grafos proporciona un marco formal para orientar ese rediseño de manera objetiva y basada en datos (Ortiz Madrigal, 2024).
+
+% =====================================================
+\section{Objetivos}\label{sec:objetivos}
+% =====================================================
+
+\subsection{Objetivo general}
+
+Formular y resolver un modelo de optimización de rutas basado en teoría de grafos y algoritmos de camino mínimo, que permita determinar el trayecto más eficiente entre pares de puntos de alta demanda en la red vial de San José, comparando un criterio de menor tiempo con un criterio ajustado por variabilidad.
+
+\subsection{Objetivos específicos}
+
+\begin{itemize}
+    \item Construir una representación formal de la red vial de San José como un grafo dirigido ponderado $G(N, A)$, obtenido de OpenStreetMap, y seleccionar un conjunto de paradas de alta importancia mediante un índice de demanda basado en densidad poblacional y destinos estratégicos.
+    \item Calcular el tiempo estimado de viaje de flujo libre $t_{ij}$ para cada arco de la red a partir de su longitud y su velocidad (observada en OSM o imputada según la clase vial), y estimar su variabilidad mediante un multiplicador lognormal por clase vial.
+    \item Implementar y resolver dos modelos de camino mínimo (menor tiempo y tiempo ajustado por variabilidad) mediante A* bidireccional, verificando su optimalidad con Dijkstra, para tres pares origen-destino representativos y una muestra ampliada de 30 pares adicionales.
+    \item Evaluar y comparar el desempeño de ambas rutas mediante simulación Monte Carlo (1000 réplicas) frente a una ruta base de referencia, cuantificando la reducción de tiempo, la reducción de variabilidad y el índice de confiabilidad.
+    \item Analizar la sensibilidad de las conclusiones ante cambios en la penalización por variabilidad ($\lambda$), en las velocidades imputadas y en el número de réplicas de la simulación.
+\end{itemize}
+
+% =====================================================
+\section{Marco teórico}\label{sec:marco}
+% =====================================================
+
+Esta sección explica, con la notación efectivamente usada en el código del proyecto (paquete \nolinkurl{rutas_gam}), los métodos matemáticos y algorítmicos aplicados: representación de la red, las dos funciones de costo, el algoritmo de búsqueda A* bidireccional, Dijkstra como control de optimalidad, y el diseño de la simulación Monte Carlo.
+
+\subsection{Representación de la red}
+
+La red vial se representa como un grafo dirigido ponderado
+\begin{equation}
+    G(N, A),
+\end{equation}
+donde $N$ es el conjunto de intersecciones y $A$ el conjunto de arcos dirigidos que conectan un nodo $i$ con un nodo $j$. Ser dirigido respeta las vías de un solo sentido: un arco $i \to j$ no implica que exista $j \to i$.
+
+Cada arco tiene asociada una longitud $d_{ij}$ (en metros, tomada de OpenStreetMap) y una velocidad $v_{ij}$. Cuando OSM no reporta el límite de velocidad (\texttt{maxspeed}), se imputa una velocidad según la clase vial (\texttt{highway}), con referencia en el artículo 98 de la Ley de Tránsito. El tiempo del arco, en minutos, es:
+\begin{equation}
+    t_{ij} = \left(\frac{d_{ij}}{v_{ij}}\right) \times 0.06
+    \label{eq:tiempo_arco}
+\end{equation}
+donde $0.06$ convierte metros y km/h a minutos. Este tiempo representa condiciones de flujo libre, es decir, sin congestión vehicular observada.
+
+\begin{quote}
+\textit{Aclaración de alcance:} este proyecto resuelve un problema de camino mínimo entre un origen y un destino, no un problema de recorrido por múltiples nodos de alta demanda (tipo agente viajero o TSP). Por esa razón no se incluye una variable binaria de selección de arco $x_{ij}$ ni una restricción de eliminación de subtours (MTZ): con costos de arco estrictamente positivos, cualquier ciclo solo puede aumentar el costo total, por lo que A* y Dijkstra nunca seleccionan un camino con ciclos. Un modelo tipo TSP con restricciones MTZ sería necesario únicamente si el objetivo fuera diseñar una única ruta que visite varias paradas de alta demanda, lo cual queda fuera del alcance definido para esta entrega.
+\end{quote}
+
+\subsection{Modelo 1: camino de menor tiempo}
+
+El primer modelo busca la ruta que minimiza la suma de los tiempos de arco entre el origen $O$ y el destino $D$:
+\begin{equation}
+    R_1^{*} = \operatorname*{argmin}_{R \in \mathcal{P}_{OD}} \; \sum_{(i,j) \in R} t_{ij}
+    \label{eq:modelo1}
+\end{equation}
+donde $\mathcal{P}_{OD}$ es el conjunto de rutas posibles entre $O$ y $D$, y $R_1^{*}$ es la ruta óptima seleccionada.
+
+\subsection{Modelo 2: camino ajustado por variabilidad}
+
+El segundo modelo parte de un supuesto de decisión distinto: además del tiempo estimado, considera relevante la variabilidad asociada a la clase vial de cada tramo. Se asume que el tiempo real de un arco sigue un multiplicador lognormal con dispersión $\sigma_{\text{vía}}$ según su clase vial, de modo que su desviación estándar estimada es:
+\begin{equation}
+    s_{ij} = t_{ij} \times \sqrt{e^{\sigma_{\text{vía}}^{2}} - 1}
+    \label{eq:desviacion_arco}
+\end{equation}
+
+A partir de esta variabilidad se define el costo ajustado del arco:
+\begin{equation}
+    c^{(2)}_{ij} = t_{ij} + \lambda \cdot s_{ij}
+    \label{eq:costo_ajustado}
+\end{equation}
+y la ruta ajustada por variabilidad se obtiene minimizando la suma de estos costos:
+\begin{equation}
+    R_2^{*} = \operatorname*{argmin}_{R \in \mathcal{P}_{OD}} \; \sum_{(i,j) \in R} c^{(2)}_{ij}
+    \label{eq:modelo2}
+\end{equation}
+
+El parámetro $\lambda \geq 0$ determina cuánto peso recibe la variabilidad: con $\lambda = 0$ el criterio coincide con el de menor tiempo, mientras que al aumentar $\lambda$ la función objetivo incorpora de forma explícita el costo de la dispersión y puede seleccionar recorridos distintos. La penalización representa un supuesto de variabilidad por clase vial y no corresponde a un cuantil exacto ni a mediciones de tráfico observado; el criterio de selección de $\lambda$ se describe en la sección~\ref{subsec:modelo2res}.
+
+\subsection{Algoritmo A* bidireccional}
+
+Ambos modelos se resuelven con A*, un algoritmo de búsqueda informada que ordena la exploración de nodos según:
+\begin{equation}
+    f(n) = g(n) + h(n)
+    \label{eq:astar}
+\end{equation}
+donde $g(n)$ es el costo acumulado desde el origen hasta el nodo $n$, y $h(n)$ es una heurística que estima el costo restante hasta el destino $D$. En este proyecto la heurística se define como:
+\begin{equation}
+    h(n) = \left(\frac{\operatorname{dist\_geo}(n, D)}{v_{\max}}\right) \times 0.06
+    \label{eq:heuristica}
+\end{equation}
+donde $\operatorname{dist\_geo}$ es la distancia geodésica en línea recta entre $n$ y $D$, y $v_{\max}$ es la mayor velocidad asignada en toda la red. Como ningún recorrido real puede ser más rápido que viajar en línea recta a la máxima velocidad posible, $h(n)$ nunca sobreestima el costo real: es una heurística \textbf{admisible}, lo que garantiza que A* encuentre la ruta óptima.
+
+La versión bidireccional ejecuta simultáneamente dos búsquedas: una avanza desde el origen y otra desde el destino sobre el grafo inverso. El algoritmo se detiene cuando ambas fronteras se encuentran y ninguna alternativa pendiente puede mejorar el costo hallado, y entonces reconstruye el camino óptimo.
+
+\subsection{Dijkstra como control de optimalidad}
+
+Dijkstra resuelve el mismo problema de camino mínimo utilizando los mismos pesos de arco, pero sin una heurística que guíe la búsqueda. En esta implementación no se presupone que explore siempre más nodos ni que sea siempre más lento, ya que ese comportamiento depende de la función de costo y de la estructura de la red. Su utilidad aquí es servir como control independiente: si A* está correctamente implementado, ambos algoritmos deben devolver el mismo costo óptimo. La sección~\ref{subsec:optimalidad} reporta esta verificación para los 33 pares estudiados.
+
+\subsection{Simulación Monte Carlo}
+
+Una vez seleccionada y verificada la secuencia de arcos de una ruta, esta se mantiene fija y se evalúa bajo 1000 escenarios simulados. En cada escenario $s$, el tiempo total de una ruta $R$ se calcula como:
+\begin{equation}
+    T_R^{(s)} = G^{(s)} \cdot \sum_{(i,j) \in R} t_{ij} \cdot M_{ij}^{(s)}
+    \label{eq:montecarlo}
+\end{equation}
+donde el multiplicador $M_{ij}^{(s)}$ representa la variación propia de cada arco (con dispersión $\sigma_{\text{vía}}$ según su clase vial), y el factor $G^{(s)}$ afecta por igual a todos los arcos de la ruta, representando condiciones compartidas como lluvia o mayor volumen de tránsito, con $\sigma_G = 0.15$. Ambos multiplicadores siguen distribuciones lognormales con esperanza igual a uno. Las simulaciones utilizan la semilla fija \texttt{2026}, la misma declarada en los notebooks para garantizar reproducibilidad.
+
+Los escenarios se resumen mediante la media, la desviación estándar, el percentil 90 y el índice de confiabilidad (IC), definido como:
+\begin{equation}
+    \mathrm{IC} = \left(\frac{1}{S}\right) \cdot \sum_{s=1}^{S} \mathbb{1}\!\left(T_R^{(s)} \leq 1.15 \cdot \bar{T}_R\right) \times 100
+    \label{eq:ic}
+\end{equation}
+
+El IC mide qué proporción de los escenarios simulados no supera en más de un 15\,\% el tiempo medio esperado de la ruta; es una medida de estabilidad relativa a la propia distribución simulada de cada ruta, no una probabilidad empírica de puntualidad medida en campo.
+
+% =====================================================
+\section{Datos y análisis exploratorio}\label{sec:datos}
+% =====================================================
+
+\subsection{Fuentes de datos}
+
+La Tabla~\ref{tab:fuentes_datos} resume las fuentes y su referencia temporal.
+
+\small
+\begin{longtable}{p{0.18\textwidth} p{0.28\textwidth} p{0.19\textwidth} p{0.21\textwidth}}
+\caption{Fuentes de datos utilizadas en el análisis.}\label{tab:fuentes_datos}\\
+\toprule
+\textbf{Fuente} & \textbf{Uso} & \textbf{Referencia temporal} & \textbf{Condiciones} \\
+\midrule
+\endhead
+\href{https://www.openstreetmap.org/copyright}{OpenStreetMap (OSM)} & Red vial dirigida, paradas y destinos estratégicos de San José & Extracción incorporada el 20 de julio de 2026 & ODbL y atribución a sus colaboradores \\
+\addlinespace
+\href{https://inec.cr/calendario/publicaciones-estadisticas/estimacion-poblacion-vivienda-2022-distribucion-nivel}{INEC: Estimaciones de Población y Vivienda 2022} & Población y límites distritales para aproximar densidad & Población de referencia: 2022; incorporada el 20 de julio de 2026 & Datos públicos agregados \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+La unidad principal de análisis de la red son sus 14\,452 arcos dirigidos, conectados por 5\,975 nodos. Las variables principales se resumen en la Tabla~\ref{tab:variables}. El procesamiento interpreta \texttt{maxspeed}, convierte valores en \texttt{mph} a km/h y, cuando el valor falta o no puede interpretarse, imputa la velocidad según la clase \texttt{highway}; no se excluyen arcos únicamente por ausencia de \texttt{maxspeed}. Después se calcula el tiempo de flujo libre, se conectan las paradas al nodo vial más cercano y se normalizan las señales usadas en el índice de importancia.
+
+\begin{table}[h!]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.20\textwidth} >{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}p{0.14\textwidth} X}
+\toprule
+\textbf{Variable} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Uso} \\
+\midrule
+\texttt{length} & Numérica continua & m & Longitud del arco en OSM \\
+\texttt{speed\_kph} & Numérica continua & km/h & Velocidad registrada o imputada \\
+\texttt{highway} & Categórica & Sin unidad & Clase vial usada en imputación y dispersión \\
+\texttt{travel\_time\_min} & Numérica continua & min & Tiempo de flujo libre del arco \\
+Densidad poblacional & Numérica continua & hab./km$^2$ & Señal distrital del INEC \\
+Destinos estratégicos & Entera & conteo en 500 m & Señal de accesibilidad alrededor de la parada \\
+$w_i$ & Numérica continua & Sin unidad & Índice normalizado de importancia \\
+\bottomrule
+\end{tabularx}
+\caption{Variables principales utilizadas en la preparación y el modelado.}
+\label{tab:variables}
+\end{table}
+
+Estas fuentes corresponden a OpenStreetMap contributors (s.f.) y al Instituto Nacional de Estadística y Censos (s.f.). Los archivos necesarios para reproducir el análisis están incluidos en \texttt{data/raw/} del repositorio. El código para reconstruir la red desde las fuentes externas está en \texttt{scripts/generar\_datos\_osm.py}.
+
+\subsection{La red vial}\label{subsec:red}
+
+La red descargada de OpenStreetMap para San José contiene 5\,975 nodos y 14\,452 arcos dirigidos. Para cada arco se calcula su tiempo de flujo libre a partir de su longitud y su velocidad. La Tabla~\ref{tab:fuente_velocidad} resume el origen de la velocidad utilizada:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Fuente de velocidad} & \textbf{Arcos} & \textbf{Porcentaje} \\
+\midrule
+Imputada (según clase vial) & 12\,291 & 85.0\,\% \\
+Registrada en OSM (\texttt{maxspeed}) & 2\,161 & 15.0\,\% \\
+\bottomrule
+\end{tabular}
+\caption{Origen de la velocidad utilizada por arco.}
+\label{tab:fuente_velocidad}
+\end{table}
+
+El 85\,\% de los arcos no tiene un límite de velocidad registrado en OSM, por lo que su tiempo se estima con una velocidad imputada según la clase vial. Esta proporción es una limitación relevante que se retoma en el análisis de sensibilidad (sección~\ref{sec:sensibilidad}) y en las limitaciones (sección~\ref{subsec:limitaciones}): las velocidades imputadas se concentran en los valores asignados por clase vial, mientras que las registradas por OSM presentan mayor dispersión, por lo que la proporción de valores imputados debe considerarse al interpretar cualquier tiempo calculado. Para la variabilidad se usan los supuestos $\sigma_{\text{vía}}$: motorway 0.10, trunk 0.12, primary 0.18, secondary 0.20, tertiary 0.22, residential 0.16 y service 0.14; las demás clases usan 0.18.
+
+La Figura~\ref{fig:velocidades_fuente} muestra esta diferencia de distribución.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figuras/figura2.png}
+    \caption{Velocidad por fuentes.}
+    \label{fig:velocidades_fuente}
+\end{figure}
+
+\subsection{Selección de paradas importantes}\label{subsec:paradas}
+
+Para cada parada candidata de OSM se calculan dos señales, normalizadas con mínimo-máximo entre 0 y 1 sobre todas las candidatas:
+
+\begin{itemize}
+    \item \textbf{Densidad poblacional} ($DP_i$): densidad del distrito, tomada de las estimaciones distritales 2022 del INEC.
+    \item \textbf{Destinos estratégicos} ($DE_i$): hospitales, clínicas, centros educativos, municipalidades, tribunales y mercados registrados en OSM dentro de un radio de 500 metros (aproximación de una distancia caminable).
+\end{itemize}
+
+\begin{equation}
+    X_i^{\text{norm}} = \frac{X_i - X_{\min}}{X_{\max} - X_{\min}}
+    \label{eq:normalizacion}
+\end{equation}
+
+El índice de importancia de cada parada se calcula como:
+\begin{equation}
+    w_i = 0.6 \cdot DP_i^{\text{norm}} + 0.4 \cdot DE_i^{\text{norm}}
+    \label{eq:indice_importancia}
+\end{equation}
+
+El 60\,\% de peso prioriza la población potencialmente atendida y el 40\,\% reconoce la atracción de destinos esenciales. El generador ordena todas las candidatas por $w_i$ y conserva las 20 paradas con mayor puntaje, cumpliendo el mínimo de 20 paradas planteado en los objetivos. Este índice solo se utiliza para seleccionar paradas candidatas a origen o destino: no se suma al tiempo de los arcos ni modifica la ruta encontrada por A*.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figuras/figura3.png}
+    \caption{Red de paradas importantes de San José.}
+    \label{fig:red_paradas}
+\end{figure}
+
+La Figura~\ref{fig:red_paradas} muestra que el tamaño y la intensidad de cada punto reflejan $w_i$. La concentración de varias paradas en el centro urbano evidencia una limitación del criterio de escoger únicamente los 20 puntajes mayores.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figuras/figura4.png}
+    \caption{Importancia de paradas de San José.}
+    \label{fig:importancia_paradas}
+\end{figure}
+
+En la Figura~\ref{fig:importancia_paradas}, una barra más larga indica mayor prioridad como origen o destino. Los empates son esperables cuando varias plataformas comparten distrito y destinos dentro de 500 metros; el índice es una aproximación y no representa el número observado de pasajeros.
+
+\subsection{Pares de estudio}\label{subsec:pares}
+
+Se definieron tres pares origen-destino con paradas reales de OSM ubicadas en lados opuestos de Circunvalación, cubriendo distintos sectores de la ciudad (Tabla~\ref{tab:pares_estudio}):
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{0.23\textwidth} >{\raggedright\arraybackslash}p{0.23\textwidth} c}
+\toprule
+\textbf{Par} & \textbf{Origen} & \textbf{Destino} & \textbf{Sentido} \\
+\midrule
+Estadio Oeste $\to$ San Pedro & Estadio Oeste & San Pedro - Carmiol & Oeste a este \\
+Cuatro Reinas $\to$ Paso Ancho & Terminal Cuatro Reinas & Parada El Caracol & Norte a sur \\
+Hatillo $\to$ Curridabat & Periférica Hatillo & Plaza del Sol & Suroeste a este \\
+\bottomrule
+\end{tabularx}
+\caption{Pares origen-destino de estudio.}
+\label{tab:pares_estudio}
+\end{table}
+
+Para ampliar la validación (sección~\ref{sec:validacion}), estos tres pares se complementan con 30 pares adicionales de nodos viales, seleccionados aleatoriamente con \texttt{numpy.random.default\_rng(2026)}, sumando 33 pares en total.
+
+% =====================================================
+\section{Modelos aplicados}\label{sec:modelos}
+% =====================================================
+
+Para cada par origen-destino se calculan dos rutas: la de menor tiempo (Modelo 1) y la ajustada por variabilidad (Modelo 2), ambas resueltas con A* bidireccional y verificadas con Dijkstra. La Tabla~\ref{tab:modelo1} presenta los resultados del primer criterio.
+
+\subsection{Resultados del Modelo 1 (menor tiempo)}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X c c c c c}
+\toprule
+\textbf{Par} & \textbf{Dist.} & \textbf{Tiempo} & \textbf{A*} & \textbf{Dijkstra} & \textbf{Nodos A*/Dij.} \\
+ & \textbf{(km)} & \textbf{(min)} & \textbf{(min)} & \textbf{(min)} & \\
+\midrule
+Estadio Oeste $\to$ San Pedro & 9.81 & 9.96 & 9.96 & 9.96 & 4\,235 / 4\,877 \\
+Cuatro Reinas $\to$ Paso Ancho & 5.56 & 8.22 & 8.22 & 8.22 & 3\,094 / 3\,245 \\
+Hatillo $\to$ Curridabat & 9.19 & 8.98 & 8.98 & 8.98 & 3\,197 / 4\,105 \\
+\bottomrule
+\end{tabularx}
+\caption{Resultados del Modelo 1 para los tres pares originales. En todos los casos A* y Dijkstra coinciden.}
+\label{tab:modelo1}
+\end{table}
+
+\subsection{Selección del valor de \texorpdfstring{$\lambda$}{lambda} y resultados del Modelo 2}\label{subsec:modelo2res}
+
+Para elegir $\lambda$ se compararon resultados deterministas del Modelo 2 con valores entre $\lambda=0$ y $\lambda=10$, en incrementos de 0.5. El criterio de selección fue tomar el menor valor positivo evaluado que modifique al menos una de las tres rutas del Modelo 1, evitando penalizar más de lo necesario para observar un comportamiento distinto entre ambos modelos.
+
+\begin{itemize}
+    \item Entre $\lambda=0$ y $\lambda=6$ se conservan las tres rutas del Modelo 1 (tiempo promedio 9.05 min).
+    \item Con $\lambda=6.5$ cambia una de las tres rutas y el tiempo determinista promedio apenas pasa de 9.05 a 9.06 min.
+    \item Desde $\lambda=9.5$ cambian dos de las tres rutas y el promedio sube a 9.84 min.
+\end{itemize}
+
+Por esta razón se selecciona $\lambda=6.5$: es el menor valor evaluado que permite observar una decisión diferente antes del segundo cambio de ruta, que aparece desde $\lambda=9.5$. Esta selección es exploratoria y depende de los supuestos de variabilidad utilizados, no de una calibración basada en tráfico observado.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X c c c c c}
+\toprule
+\textbf{Par} & \textbf{Dist.} & \textbf{T. determ.} & \textbf{Costo obj.} & \textbf{A* = Dij.} & \textbf{Nodos A*/Dij.} \\
+ & \textbf{(km)} & \textbf{(min)} & \textbf{(min)} & \textbf{(min)} & \\
+\midrule
+Estadio Oeste $\to$ San Pedro & 9.80 & 9.98 & 18.52 & 18.52 & 5\,293 / 4\,554 \\
+Cuatro Reinas $\to$ Paso Ancho & 5.56 & 8.22 & 19.51 & 19.51 & 5\,382 / 4\,773 \\
+Hatillo $\to$ Curridabat & 9.19 & 8.98 & 16.67 & 16.67 & 4\,324 / 3\,640 \\
+\bottomrule
+\end{tabularx}
+\caption{Resultados del Modelo 2 con $\lambda = 6.5$.}
+\label{tab:modelo2}
+\end{table}
+
+Como muestra la Tabla~\ref{tab:modelo2}, con $\lambda=6.5$ el Modelo 2 selecciona una ruta diferente únicamente en el par Estadio Oeste $\to$ San Pedro; en los otros dos pares conserva exactamente la misma secuencia de arcos que el Modelo 1.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{figuras/figura5.png}
+    \caption{Rutas obtenidas con los dos modelos sobre la red vial de San José.}
+    \label{fig:rutas_modelos}
+\end{figure}
+
+\paragraph{Lectura del mapa.} En la Figura~\ref{fig:rutas_modelos}, la línea azul corresponde al Modelo 1 (menor tiempo) y la línea naranja discontinua al Modelo 2 (ajustado por variabilidad). En el par Estadio Oeste $\to$ San Pedro las líneas siguen recorridos distintos porque la penalización con $\lambda=6.5$ modifica la ruta seleccionada; en los otros dos pares las líneas se superponen porque ambos criterios conservan la misma secuencia de arcos.
+
+\subsection{Evaluación Monte Carlo y comparación con la ruta base}
+
+Como esta entrega no dispone de las rutas oficiales de autobús para los tres pares estudiados (que podrían obtenerse con datos de ARESEP), se construyó una ruta base reproducible: para cada par se calcula el camino de menor distancia entre el origen y un punto intermedio, y entre ese punto intermedio y el destino, uniendo ambos segmentos. Esta ruta base es una aproximación metodológica y no representa un itinerario oficial.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Par} & \textbf{T. óptimo (min)} & \textbf{T. base (min)} & \textbf{RT \%} & \textbf{RV \%} & \textbf{IC \%} \\
+\midrule
+Estadio Oeste $\to$ San Pedro & 9.96 & 11.11 & 10.35 & 9.12 & 83.8 \\
+Cuatro Reinas $\to$ Paso Ancho & 8.22 & 8.59 & 4.32 & 3.86 & 82.9 \\
+Hatillo $\to$ Curridabat & 8.98 & 12.45 & 27.86 & 27.82 & 84.4 \\
+\bottomrule
+\end{tabular}
+\caption{Comparación del Modelo 1 contra la ruta base.}
+\label{tab:referencia_base}
+\end{table}
+
+En la Tabla~\ref{tab:referencia_base}, RT es la reducción porcentual del tiempo determinista del Modelo 1 respecto a la ruta base, mientras que RV compara sus desviaciones obtenidas mediante Monte Carlo. Por tanto, RT no se calcula sobre los escenarios simulados. Separadamente, al comparar las medias simuladas frente a las rutas base, la mejora media es de 14.13\,\% para el Modelo 1 y de 14.05\,\% para el Modelo 2.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{figuras/figura6.png}
+    \caption{Distribución de los tiempos simulados en 1000 escenarios para los tres pares, comparando ambos modelos con la ruta base.}
+    \label{fig:simulacion_modelos}
+\end{figure}
+
+\paragraph{Lectura del gráfico.} En la Figura~\ref{fig:simulacion_modelos}, una distribución más a la izquierda representa menores tiempos y una distribución más estrecha indica menor variabilidad; las líneas discontinuas marcan las medias simuladas. Cuando los dos modelos producen la misma distribución se muestran como una sola serie. En Cuatro Reinas $\to$ Paso Ancho y Hatillo $\to$ Curridabat, Modelo 1 y Modelo 2 coinciden exactamente; en Estadio Oeste $\to$ San Pedro, el Modelo 2 se desplaza ligeramente hacia tiempos mayores respecto al Modelo 1, y ambos quedan por debajo de la ruta base.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{figuras/figura7.png}
+    \caption{Comparación cuantitativa del tiempo medio simulado y el percentil 90 entre ambos modelos, por par.}
+    \label{fig:comparacion_modelos}
+\end{figure}
+
+La Figura~\ref{fig:comparacion_modelos} confirma que el Modelo 1 mantiene una media y un percentil 90 iguales o ligeramente menores en los tres pares bajo los supuestos simulados.
+
+\begin{table}[h!]
+\centering
+\scriptsize
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X c c c c c c}
+\toprule
+\textbf{Par y modelo} & \textbf{T. det.} & \textbf{Media} & \textbf{Desv.} & \textbf{P90} & \textbf{IC \%} & \textbf{Ruta dif.} \\
+ & \textbf{(min)} & \textbf{(min)} & \textbf{(min)} & \textbf{(min)} & & \\
+\midrule
+Estadio Oeste $\to$ San Pedro, M1 & 9.96 & 10.00 & 1.59 & 12.06 & 83.8 & --- \\
+Estadio Oeste $\to$ San Pedro, M2 & 9.98 & 10.03 & 1.59 & 12.07 & 83.9 & Sí \\
+Cuatro Reinas $\to$ Paso Ancho, M1/2 & 8.22 & 8.26 & 1.34 & 10.04 & 82.9 & No \\
+Hatillo $\to$ Curridabat, M1/2 & 8.98 & 8.93 & 1.37 & 10.75 & 84.4 & No \\
+\bottomrule
+\end{tabularx}
+\caption{Detalle de la simulación Monte Carlo por par y modelo.}
+\label{tab:montecarlo_detalle}
+\end{table}
+
+La Tabla~\ref{tab:montecarlo_detalle} resume esta comparación. Con $\lambda=6.5$, el Modelo 1 conserva el menor tiempo medio en los tres pares. El Modelo 2 permite estudiar cómo una penalización más fuerte puede modificar la decisión (1 de 3 rutas cambia), pero la simulación no muestra una mejora relevante para la ruta que cambia: su media simulada aumenta ligeramente de 10.00 a 10.03 minutos, con desviación y percentil 90 prácticamente iguales.
+
+% =====================================================
+\section{Validación y comparación}\label{sec:validacion}
+% =====================================================
+
+Este proyecto no entrena un modelo con una variable objetivo observada, por lo que una validación cruzada tradicional no aplica. Se utiliza en su lugar un esquema equivalente para problemas de optimización, con dos componentes: verificación algorítmica de optimalidad y ampliación de la muestra de pares.
+
+\subsection{Verificación de optimalidad: A* frente a Dijkstra}\label{subsec:optimalidad}
+
+Para el Modelo 1 se valida el costo temporal de cada arco ($t_{ij}$); para el Modelo 2, el costo ajustado
+\begin{equation}
+    c^{(2)}_{ij} = t_{ij} + \lambda \cdot s_{ij}, \qquad \lambda = 6.5.
+\end{equation}
+Los costos obtenidos por A* bidireccional y por Dijkstra deben coincidir dentro de una tolerancia de $10^{-6}$ minutos.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Muestra} & \textbf{Pares} & \textbf{Rutas diferentes (M2 vs. M1)} \\
+\midrule
+Original & 3 & 1 \\
+Adicional & 30 & 11 \\
+\bottomrule
+\end{tabular}
+\caption{Resumen de la muestra usada para la verificación de optimalidad.}
+\label{tab:muestra_validacion}
+\end{table}
+
+De acuerdo con la Tabla~\ref{tab:muestra_validacion}, A* y Dijkstra coincidieron para ambos costos en los 33 pares evaluados, con una diferencia máxima de aproximadamente $2.2\times 10^{-14}$ minutos, muy por debajo de la tolerancia establecida. Esto confirma que A* bidireccional encuentra la ruta óptima bajo ambas funciones de costo.
+
+\subsection{Comparación cuantitativa sobre los 30 pares adicionales}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X c c c c c c}
+\toprule
+\textbf{Modelo} & \textbf{Pares} & \textbf{Rutas dif.} & \textbf{T. det.} & \textbf{Media sim.} & \textbf{Desv.} & \textbf{P90} \\
+ & & & \textbf{prom. (min)} & \textbf{prom. (min)} & \textbf{prom. (min)} & \textbf{prom. (min)} \\
+\midrule
+Menor tiempo (M1) & 30 & 11 & 6.36 & 6.37 & 0.98 & 7.66 \\
+Ajustada por variabilidad (M2) & 30 & 11 & 6.44 & 6.45 & 1.00 & 7.76 \\
+\bottomrule
+\end{tabularx}
+\caption{Comparación agregada sobre los 30 pares adicionales (IC promedio: 83.57\,\% para M1, 83.58\,\% para M2).}
+\label{tab:validacion_adicional}
+\end{table}
+
+La Tabla~\ref{tab:validacion_adicional} muestra que, sobre la muestra ampliada, el Modelo 1 obtiene una media simulada de 6.37 minutos y un percentil 90 de 7.66 minutos; el Modelo 2 obtiene 6.45 y 7.76 minutos, respectivamente. La desviación promedio pasa de 0.98 a 1.00 minutos y el índice de confiabilidad permanece prácticamente igual (83.57\,\% frente a 83.58\,\%).
+
+Con los datos y supuestos actuales, se selecciona el \textbf{Modelo 1 (camino de menor tiempo)} como resultado principal, ya que presenta menores tiempos deterministas y simulados sin una pérdida relevante de confiabilidad. El \textbf{Modelo 2} se conserva como análisis complementario: demuestra que una penalización explícita puede cambiar 11 de los 30 recorridos, pero no produce una mejora cuantitativa en las métricas simuladas. Esta elección es válida únicamente dentro del alcance de flujo libre definido para esta investigación y no constituye, por sí sola, evidencia sobre desempeño en tráfico real.
+
+% =====================================================
+\section{Análisis de sensibilidad y limitaciones}\label{sec:sensibilidad}
+% =====================================================
+
+Se modificaron por separado tres supuestos del análisis, manteniendo los tres pares originales para que cada cambio pueda atribuirse a ese supuesto: la penalización por riesgo $\lambda$, el factor de las velocidades imputadas y el número de réplicas de la simulación Monte Carlo.
+
+\subsection{Sensibilidad a \texorpdfstring{$\lambda$}{lambda} (riesgo)}
+
+Se probaron valores de $\lambda$ entre 0 y 10 en incrementos de 0.5, evaluando cada ruta resultante con simulación Monte Carlo (1000 réplicas).
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Rango de $\lambda$} & \textbf{Rutas diferentes (de 3)} & \textbf{Tiempo medio simulado (min)} \\
+\midrule
+$0.0$ -- $6.0$ & 0 & 9.064 \\
+$6.5$ -- $9.0$ & 1 & 9.074 \\
+$9.5$ -- $10.0$ & 2 & 9.852 \\
+\bottomrule
+\end{tabular}
+\caption{Sensibilidad de la ruta seleccionada ante $\lambda$.}
+\label{tab:sensibilidad_lambda}
+\end{table}
+
+Como resume la Tabla~\ref{tab:sensibilidad_lambda}, con $\lambda=0$ desaparece la penalización y el Modelo 2 reproduce el camino de menor tiempo. Los tres recorridos se mantienen estables hasta $\lambda=6$; con $\lambda=6.5$ cambia el par Estadio Oeste $\to$ San Pedro, y desde $\lambda=9.5$ cambian dos de los tres pares. Esto confirma que la decisión es robusta ante penalizaciones moderadas, pero puede modificarse cuando se asigna una importancia mucho mayor a la variabilidad.
+
+\subsection{Sensibilidad a las velocidades imputadas}
+
+Se aplicó un factor multiplicativo $f_v \in \{0.85,\, 1.00,\, 1.15\}$ únicamente sobre las velocidades imputadas (las que no provienen de OSM), manteniendo $\lambda=6.5$.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Factor $f_v$} & \textbf{Modelo} & \textbf{T. medio (min)} & \textbf{Desv. (min)} & \textbf{P90 (min)} & \textbf{IC \%} \\
+\midrule
+0.85 & Menor tiempo & 9.595 & 1.516 & 11.590 & 83.73 \\
+0.85 & Ajustada por variabilidad & 10.140 & 1.599 & 12.217 & 83.90 \\
+1.00 & Menor tiempo & 9.064 & 1.431 & 10.948 & 83.70 \\
+1.00 & Ajustada por variabilidad & 9.074 & 1.433 & 10.951 & 83.73 \\
+1.15 & Menor tiempo & 8.668 & 1.369 & 10.460 & 83.73 \\
+1.15 & Ajustada por variabilidad & 8.681 & 1.370 & 10.470 & 83.80 \\
+\bottomrule
+\end{tabular}
+\caption{Sensibilidad ante el factor de velocidad imputada $f_v$.}
+\label{tab:sensibilidad_velocidad}
+\end{table}
+
+La Tabla~\ref{tab:sensibilidad_velocidad} muestra el efecto del factor, que solo modifica las velocidades que faltaban en OSM. Al pasar de 0.85 a 1.15, el tiempo medio disminuye aproximadamente 0.93 minutos en el Modelo 1 y 1.46 minutos en el Modelo 2. Con $\lambda=6.5$, el número de pares cuya ruta cambia respecto al escenario base también varía con el factor. La magnitud de los tiempos y la selección de algunas rutas son sensibles a la imputación de velocidad: esta es una limitación relevante mientras no existan velocidades observadas para el 85\,\% de los arcos que hoy dependen de un valor imputado.
+
+\subsection{Sensibilidad al número de réplicas Monte Carlo}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Réplicas} & \textbf{Modelo} & \textbf{T. medio (min)} & \textbf{Desv. (min)} & \textbf{P90 (min)} & \textbf{IC \%} \\
+\midrule
+200 & Menor tiempo & 9.088 & 1.480 & 11.019 & 84.00 \\
+200 & Ajustada por variabilidad & 9.096 & 1.480 & 11.018 & 84.17 \\
+1\,000 & Menor tiempo & 9.064 & 1.431 & 10.948 & 83.70 \\
+1\,000 & Ajustada por variabilidad & 9.074 & 1.433 & 10.951 & 83.73 \\
+5\,000 & Menor tiempo & 9.051 & 1.387 & 10.871 & 83.93 \\
+5\,000 & Ajustada por variabilidad & 9.060 & 1.388 & 10.883 & 83.92 \\
+\bottomrule
+\end{tabular}
+\caption{Sensibilidad ante el número de réplicas de la simulación Monte Carlo.}
+\label{tab:sensibilidad_replicas}
+\end{table}
+
+Según la Tabla~\ref{tab:sensibilidad_replicas}, la ruta seleccionada no cambia al aumentar el número de réplicas. Entre 1000 y 5000 réplicas, la media agregada cambia cerca de 0.01 minutos y el percentil 90 cerca de 0.08 minutos: las métricas son razonablemente estables, y 1000 escenarios resultan suficientes para esta comparación inicial.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{figuras/figura8.png}
+    \caption{Análisis de sensibilidad de los modelos ante $\lambda$, el factor de velocidad imputada y el número de réplicas.}
+    \label{fig:sensibilidad}
+\end{figure}
+
+La Figura~\ref{fig:sensibilidad} sintetiza los tres experimentos: la selección de ruta es estable ante penalizaciones moderadas y ante el número de réplicas, mientras que los tiempos muestran mayor sensibilidad a las velocidades imputadas.
+
+\subsection{Alcance y limitaciones}\label{subsec:limitaciones}
+
+Los resultados deben interpretarse dentro de un alcance teórico bien definido:
+
+\begin{itemize}
+    \item Los tiempos son teóricos y representan condiciones de flujo libre; esta etapa de la investigación es exclusivamente teórica y no incorpora tráfico observado.
+    \item Las dispersiones por clase vial ($\sigma_{\text{vía}}$) son supuestos de simulación, no estimaciones obtenidas de datos de tráfico reales; el factor general $G$ no interviene en la selección de ruta porque multiplica por igual a todos los arcos de cada réplica.
+    \item La comparación usa la misma semilla y los mismos supuestos probabilísticos para ambos modelos, lo que da un procedimiento reproducible, pero los multiplicadores locales se generan a lo largo de cada recorrido y no constituyen una observación simultánea de tráfico para toda la red.
+    \item El índice de confiabilidad (IC) es relativo a la propia media simulada de cada ruta: describe su dispersión interna, no una probabilidad empírica de puntualidad medida en campo.
+    \item Los 30 pares adicionales son pares sintéticos de nodos viales que amplían la comprobación algorítmica, pero no representan demanda, viajes observados ni paradas oficiales.
+    \item El 85\,\% de los arcos usa una velocidad imputada por clase vial, no observada (sección~\ref{subsec:red}), lo cual condiciona la magnitud de todos los tiempos calculados.
+    \item Las 20 paradas seleccionadas por el índice $w_i$ quedan geográficamente concentradas en el centro urbano, lo que limita la cobertura de zonas periféricas en los pares de estudio disponibles.
+\end{itemize}
+
+Una ruta ajustada por variabilidad no equivale a un recorrido oficial ni garantiza un mejor desempeño real. Bajo estas limitaciones, la comparación favorece al Modelo 1 y conserva el Modelo 2 como criterio alternativo de decisión ajustado por variabilidad; los resultados no deben utilizarse por sí solos para decisiones operativas o de inversión.
+
+% =====================================================
+\section{Consideraciones éticas y gobernanza de datos}\label{sec:etica}
+% =====================================================
+
+\subsubsection*{Origen y permiso}
+
+Los datos combinan OpenStreetMap, que tiene licencia ODbL (uso, modificación y redistribución permitidos con atribución y \textit{share-alike}); estadísticas públicas agregadas por distrito del INEC; y tiempos de viaje simulados por el propio equipo. Ninguna fuente restringe su uso o publicación en un repositorio abierto; solo debe mantenerse la atribución correspondiente a OSM y a las instituciones de origen.
+
+\subsubsection*{Privacidad}
+
+No hay datos personales ni reidentificables. La población se maneja agregada por distrito, nunca por individuo, hogar o vehículo; el radio de 500 m se utiliza únicamente para contar destinos estratégicos alrededor de una parada. Los nodos son ubicaciones geográficas (paradas, intersecciones, destinos), no personas, y los tiempos de viaje son simulados o promediados por tramo. Al no recolectarse datos a nivel individual desde el diseño, no fue necesaria anonimización adicional.
+
+\subsubsection*{Sesgo}
+
+El riesgo principal es geográfico: OSM está mejor digitalizado en zonas urbanas centrales que en cantones periféricos, y los destinos estratégicos identificados priorizan instituciones formales sobre comercios o rutas informales típicas de zonas de menor desarrollo. Un modelo entrenado así favorecería rutas hacia zonas ya bien conectadas, perjudicando a los usuarios de zonas periféricas o mal representadas en los datos, justamente quienes más dependen del transporte público. Esta limitación se refuerza empíricamente en la sección~\ref{subsec:paradas}: la selección de las 20 paradas por mayor $w_i$ produjo una concentración geográfica visible en el centro urbano.
+
+\subsubsection*{Uso indebido}
+
+Un error sistemático (subestimar tiempo, variabilidad de un tramo o el peso de demanda de un nodo) podría llevar a desviar rutas de zonas con alta demanda real pero mal representada, dejando a esas comunidades con peor servicio y agravando la desigualdad que el proyecto busca resolver. Como salvaguarda: usar el modelo solo como apoyo, validando con datos de campo y consulta comunitaria antes de modificar rutas reales; auditar y actualizar periódicamente los datos; y reportar el percentil 90 y el índice de confiabilidad de cada ruta para que la decisión final considere su incertidumbre.
+
+% =====================================================
+\section{Conclusiones}\label{sec:conclusiones}
+% =====================================================
+
+Las conclusiones siguientes responden directamente a los objetivos específicos planteados en la sección~\ref{sec:objetivos}, con base en los resultados presentados entre las secciones~\ref{sec:datos} y~\ref{sec:sensibilidad}.
+
+\begin{itemize}
+    \item Se construyó y validó una representación de la red vial de San José como grafo dirigido ponderado (5\,975 nodos, 14\,452 arcos) y se seleccionaron 20 paradas de alta importancia mediante un índice $w_i$ basado en densidad poblacional (60\,\%) y destinos estratégicos (40\,\%), cumpliendo el mínimo definido en los objetivos.
+    \item Se calculó el tiempo de flujo libre para cada arco a partir de su longitud y velocidad, y se estimó su variabilidad mediante un multiplicador lognormal por clase vial; el 85\,\% de los arcos depende de una velocidad imputada, no observada.
+    \item Ambos modelos (menor tiempo y ajustado por variabilidad) se resolvieron con A* bidireccional y se verificaron con Dijkstra sobre 33 pares (3 originales + 30 adicionales): los costos coincidieron en el 100\,\% de los casos, con una diferencia máxima de $2.2\times 10^{-14}$ minutos, confirmando la optimalidad del algoritmo implementado.
+    \item Frente a una ruta base de referencia, el Modelo 1 logró una reducción de tiempo (RT) de entre 4.3\,\% y 27.9\,\% según el par, con un RT promedio de 14.18\,\%, y una reducción de variabilidad (RV) comparable, sin pérdida relevante de confiabilidad (IC $\approx 83$--$84\,\%$).
+    \item La penalización por variabilidad ($\lambda=6.5$, seleccionado mediante un criterio exploratorio) modifica 1 de 3 rutas originales y 11 de 30 rutas adicionales, pero no mejora las métricas simuladas de las rutas que cambia; por ello se selecciona el Modelo 1 como resultado principal y el Modelo 2 se conserva como criterio alternativo ajustado por variabilidad para comparar decisiones bajo una función objetivo distinta.
+    \item Las conclusiones son estables ante penalizaciones moderadas de $\lambda$ (0--6) y ante el número de réplicas Monte Carlo (1000 es suficiente), pero son sensibles a las velocidades imputadas, lo que constituye la principal fuente de incertidumbre del análisis actual.
+\end{itemize}
+
+En conjunto, la evidencia respalda la teoría de grafos y la búsqueda de caminos mínimos como un marco metodológico válido para identificar rutas más eficientes en la GAM, pero los resultados actuales tienen alcance teórico (tiempos de flujo libre, sin tráfico observado) y no deben interpretarse como una recomendación operativa definitiva sin las validaciones adicionales descritas en la siguiente sección.
+
+% =====================================================
+\section{Recomendaciones}\label{sec:recomendaciones}
+% =====================================================
+
+\subsection{Para instituciones y actores del sistema de transporte}
+
+\begin{itemize}
+    \item Al Ministerio de Obras Públicas y Transportes (MOPT) y al Consejo de Transporte Público: usar este tipo de modelo como herramienta exploratoria de apoyo —no como decisión final— para identificar corredores donde el trazado actual de rutas se aleja considerablemente del camino de menor tiempo posible, priorizando su revisión con datos de campo.
+    \item A las empresas operadoras de autobuses: incorporar mediciones reales de tiempo de viaje por tramo (por ejemplo, mediante GPS de las unidades) para sustituir las velocidades imputadas del 85\,\% de los arcos, que hoy son la principal fuente de incertidumbre del modelo.
+    \item A ARESEP: facilitar el acceso a los trazados oficiales de las rutas de autobús vigentes, de modo que la comparación pueda hacerse contra itinerarios reales y no contra la ruta base reproducible utilizada en esta etapa.
+    \item A los equipos de planificación urbana: si se usa este modelo para orientar decisiones de rediseño de rutas, exigir siempre el reporte del percentil 90 y del índice de confiabilidad (IC) de cada ruta propuesta, no solo su tiempo medio, y contrastar los resultados con consulta comunitaria en las zonas periféricas identificadas como subrepresentadas en los datos (sección~\ref{sec:etica}).
+\end{itemize}
+
+\subsection{Para una siguiente etapa de la investigación}
+
+\begin{itemize}
+    \item Incorporar datos observados de tiempos de viaje y variabilidad por tramo (registros públicos de GPS de autobuses, condiciones de tráfico, horario, día de la semana y clima) para sustituir los tiempos de flujo libre por estimaciones representativas de la realidad vial.
+    \item Integrar los recorridos oficiales, paradas, horarios y frecuencias del transporte público, de modo que las rutas calculadas puedan compararse con trayectos existentes y considerar tiempos de espera, transbordos y restricciones operativas.
+    \item Estudiar la demanda mediante información agregada de ascensos y descensos, matrices origen--destino o encuestas de movilidad, para seleccionar pares según su importancia real y evaluar si las rutas propuestas benefician los desplazamientos con mayor demanda.
+    \item Con observaciones suficientes, reemplazar las dispersiones por clase vial con variabilidades estimadas por tramo, y calibrar $\lambda$ según el equilibrio observado entre tiempo y confiabilidad, en lugar de un criterio exploratorio.
+    \item Validar los modelos con períodos o recorridos que no participen en su calibración, usando métricas como error absoluto medio, cobertura de intervalos, puntualidad y tiempo de viaje observado, y ampliar el mecanismo de selección de paradas para reducir su concentración geográfica actual.
+\end{itemize}
+
+% =====================================================
+\section*{Referencias bibliográficas}
+\label{sec:referencias}
+\addcontentsline{toc}{section}{Referencias bibliográficas}
+% =====================================================
+
+\small
+\begin{list}{}{\leftmargin=1.5em \itemindent=-1.5em \itemsep=0.35em}
+
+\item Barabási, A.-L., \& Pósfai, M. (2016). \textit{Network science}. Cambridge University Press. \url{http://networksciencebook.com/}
+
+\item Boeing, G. (2017). OSMnx: New methods for acquiring, constructing, analyzing, and visualizing complex street networks. \textit{Computers, Environment and Urban Systems, 65}, 126--139. \url{https://doi.org/10.1016/j.compenvurbsys.2017.05.004}
+
+\item Cardozo, O. D., Gómez, E. L., \& Parras, M. A. (2009). Teoría de grafos y sistemas de información geográfica aplicados al transporte público de pasajeros en Resistencia (Argentina). \textit{Revista Transporte y Territorio}, (1), 89--111. \url{https://repositorio.filo.uba.ar/server/api/core/bitstreams/d03ee09b-c29c-4fd2-b14f-f00ff956c37c/content}
+
+\item Dijkstra, E. W. (1959). A note on two problems in connexion with graphs. \textit{Numerische Mathematik, 1}, 269--271. \url{https://doi.org/10.1007/BF01386390}
+
+\item El Financiero. (2026, 13 de mayo). La cuenta regresiva: Costa Rica avanza hacia el punto de no retorno en movilidad urbana. \url{https://www.elfinancierocr.com/economia-y-politica/la-cuenta-regresiva-costa-rica-avanza-hacia-el/23VBZ6TTPZF4RAVQUW6AK4ABZY/story/}
+
+
+\item Garcia, F. (2026, 17 de marzo). Personas movilizadas por transporte público bajó un 42.2\,\% mientras la cantidad de vehículos creció un 62.1\,\% en los últimos 12 años. \textit{Semanario Universidad}. \url{https://semanariouniversidad.com/pais/personas-movilizadas-por-transporte-publico-bajo-un-42-2-mientras-la-cantidad-de-vehiculos-crecio-un-62-1-en-los-ultimos-12-anos/}
+
+\item Hagberg, A. A., Schult, D. A., \& Swart, P. J. (2008). Exploring network structure, dynamics, and function using NetworkX. En G. Varoquaux, T. Vaught, \& J. Millman (Eds.), \textit{Proceedings of the 7th Python in Science Conference (SciPy2008)} (pp. 11--15). \url{https://doi.org/10.25080/TCWV9851}
+
+\item Hart, P. E., Nilsson, N. J., \& Raphael, B. (1968). A formal basis for the heuristic determination of minimum cost paths. \textit{IEEE Transactions on Systems Science and Cybernetics, 4}(2), 100--107. \url{https://doi.org/10.1109/TSSC.1968.300136}
+
+\item Museo Nacional de Costa Rica. (s.f.). \textit{Descripción Gran Área Metropolitana}. Recuperado el 15 de agosto de 2026, de \url{https://www.museocostarica.go.cr/nuestro-trabajo/investigaciones/historia-natural/gam/descripcion/}
+
+
+\item Instituto Nacional de Estadística y Censos. (s.f.). \textit{Estimación de Población y Vivienda 2022: distribución a nivel distrital}. Recuperado el 20 de julio de 2026, de \url{https://inec.cr/calendario/publicaciones-estadisticas/estimacion-poblacion-vivienda-2022-distribucion-nivel}
+
+\item OpenStreetMap contributors. (s.f.). \textit{OpenStreetMap: copyright and license}. Recuperado el 20 de julio de 2026, de \url{https://www.openstreetmap.org/copyright}
+
+\item Ortiz Madrigal, G. A. (2024, 23 de febrero). El grave problema de movilidad del GAM requiere una solución de largo plazo. \textit{Delfino.cr}. \url{https://delfino.cr/2024/02/el-grave-problema-de-movilidad-del-gam-requiere-una-solucion-de-largo-plazo}
+
+\item Programa de las Naciones Unidas para el Desarrollo. (2022, 31 de mayo). 20 municipalidades de la GAM se unen para mejorar movilidad de las personas y restaurar paisaje urbano. \url{https://www.undp.org/es/costa-rica/press-releases/20-municipalidades-de-la-gam-se-unen-para-mejorar-movilidad-de-las-personas-y-restaurar-paisaje-urbano}
+
+\item Universidad de Costa Rica. (2023, 23 de abril). Costa Rica está varada en un sistema de transporte público obsoleto. \url{https://www.ucr.ac.cr/noticias/2023/4/23/costa-rica-esta-varada-en-un-sistema-de-transporte-publico-obsoleto.html}
+
+\item Universidad de Costa Rica. (2024, 11 de abril). La UCR propone impulsar el desarrollo urbano orientado al transporte público en el país. \url{https://www.ucr.ac.cr/noticias/2024/4/11/la-ucr-propone-impulsar-el-desarrollo-urbano-orientado-al-transporte-publico-en-el-pais.html}
+
+\item Vásquez Gómez, L. A., Fernández, C., \& Rincón, D. (2024). Teoría de grafos para optimizar la red de cobertura a instituciones. \textit{Revista de la Universidad del Zulia, 15}(43), 298--319. \url{https://produccioncientificaluz.org/index.php/rluz/article/download/45067/54042/}
+
+\end{list}
+\normalsize
+
+% =====================================================
+\section*{Nota sobre uso de asistentes de inteligencia artificial}
+\addcontentsline{toc}{section}{Nota sobre uso de asistentes de inteligencia artificial}
+% =====================================================
+
+
+El equipo utilizó un asistente de inteligencia artificial (Codex, OpenAI) como apoyo en las siguientes tareas: validación, sensibilidad, y recomendaciones de este documento, a partir de los resultados numéricos y las figuras generadas por el propio código del equipo en los notebooks 01, 02 y 03; revisión de consistencia entre las fórmulas descritas en el Avance 1 y las funciones de costo efectivamente implementadas en el paquete \texttt{rutas\_gam}, señalando y corrigiendo discrepancias; los resultados numéricos y las decisiones metodológicas (selección de $\lambda$, diseño de la simulación, criterios de validación) fueron desarrollados y ejecutados por el equipo; el asistente no generó ni modificó resultados analíticos. Todos los integrantes revisaron y pueden explicar el contenido final entregado.
+
+\end{document}
